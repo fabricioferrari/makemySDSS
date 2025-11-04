@@ -39,31 +39,28 @@ is list of objects (header optional), say named mysample.csv
 
 [2] IDENTIFYING UNIQUE SETUPS (run,rerun,camcol,field)
 
-run the makemySDSSunique.py  on it 
+run the 1.makemySDSSunique.py  on it 
 
-$   python makemySDSSunique.py  mysample.csv > uniqueframes.csv
+$   python 1.makemySDSSunique.py  mysample.csv > uniqueframes.csv
 
 
 
 [3] Downloading files
 
-run the makemyGET.py script. It generates either WGET or RSYNC scripts. Usually you download the files 
+run the 2.makemyGET.py script. It generates either WGET or RSYNC scripts. Usually you download the files 
 with WGET and them ckeck for corrupted files with RSYNC. (WGET is faster in SDSS)
 
-$ makemyGET.py uniqueframes.csv r wget  > wget_download_script.sh
+$ 2.makemyGET.py uniqueframes.csv r wget  > wget_download_script.sh
 
-or 
-
-$ makemyGET.py uniqueframes.csv r wget > rsync_download_script.sh
 
 
 
 [4]. GENERATE STAMPS AND PSF
 
 All files must be downloaded beforehand (see [3]).
-Run the makemySTAMPS.py script.
+Run the 3.makemySTAMPS.py script.
 
-$  makemySTAMPS.py mysample.csv  uniqueframes.csv  band
+$  3.makemySTAMPS.py mysample.csv  uniqueframes.csv  band
 
 It will extract the individual objects for each field and the corresponding psf. 
 It will store the file in stamps_`band` and psf_`band`.
@@ -75,9 +72,6 @@ NOTES: - you may process only part of the frames identified in mysample.csv
          Check the header of makemySTAMPS.py 
 
 
-
-[5]. WRITE ME
-     saying everything went ok and thanks.
 
 
 
