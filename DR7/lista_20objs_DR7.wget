@@ -1,0 +1,12 @@
+
+# RUN,RERUN,CAMCOL,FIELD 1356 40 2 31
+wget -r -c -nd --directory-prefix=frames_r  http://das.sdss.org/imaging/1356/40/corr/2/fpC-001356-r2-0031.fit.gz
+wget -r -c -nd --directory-prefix=psField  http://das.sdss.org/imaging/1356/40/objcs/2/psField-001356-2-0031.fit
+
+# RUN,RERUN,CAMCOL,FIELD 1356 40 2 33
+wget -r -c -nd --directory-prefix=frames_r  http://das.sdss.org/imaging/1356/40/corr/2/fpC-001356-r2-0033.fit.gz
+wget -r -c -nd --directory-prefix=psField  http://das.sdss.org/imaging/1356/40/objcs/2/psField-001356-2-0033.fit
+
+# RUN,RERUN,CAMCOL,FIELD 1356 40 2 32
+wget -r -c -nd --directory-prefix=frames_r  http://das.sdss.org/imaging/1356/40/corr/2/fpC-001356-r2-0032.fit.gz
+wget -r -c -nd --directory-prefix=psField  http://das.sdss.org/imaging/1356/40/objcs/2/psField-001356-2-0032.fit

@@ -1,0 +1,28 @@
+#log# Automatic Logger file. *** THIS MUST BE THE FIRST LINE ***
+#log# DO NOT CHANGE THIS LINE OR THE TWO BELOW
+#log# opts = Struct({'__allownew': True, 'logfile': 'SDSS_STAMP_cut_astLib.log', 'pylab': 1})
+#log# args = []
+#log# It is safe to make manual edits below here.
+#log#-----------------------------------------------------------------------
+
+f1,h1  = pyfits.getdata('fpC-000745-i2-0518.fit.gz',header=1)
+
+from astLib import astWCS
+
+wcs = astWCS.WCS('fpC-000745-i2-0518.fit.gz')
+
+from astLib import astImages
+
+astImages.clipImageSectionPix(f1,1125,673, 50)
+
+
+imshow(astImages.clipImageSectionPix(f1,1125,673, 100))
+
+X = astImages.clipImageSectionWCS(f1,wcs, 236.28666, -0.51798, 0.01)
+
+imshow(X['data'])
+
+astImages.saveFITS('testeSTAMP.fits', X['data'], X['wcs'])
+
+
+

@@ -1,0 +1,60 @@
+
+--------------------------------------------------------
+	makemySDSS suite 
+
+For downloading SDSS Fields and generating PSF from them.
+
+
+Fabricio Ferrari, www.ferrari.pro.br, 2013
+--------------------------------------------------------
+
+NEEDS
+
+- read_PSF executable from the SDSS 
+(http://www.sdss.org/dr7/products/images/read_psf.html)
+- astLib python library to transform WCS to PIXEL
+
+
+
+HOWTO.
+
+[1]. Have a list with objects (header optional), say named foo.list
+
+objid,ra,dec,run,rerun,camcol,field
+587725576423342343,257.91582337,64.10728627,1356,40,2,32
+587725576423342340,257.93428764,64.11213814,1356,40,2,32
+587725576423276790,258.03445697,64.28134959,1356,40,2,31
+587725576423276784,257.99694569,64.27669727,1356,40,2,31
+587725576423342219,258.0041133,64.03787358,1356,40,2,32
+...
+
+
+[2]. run the makemySDSSlist.py  in it (makemySDSSlist.py LISTFILE FILTERS)
+
+$   python makemySDSSlist.py  foo.list ugriz   >  download.sh
+
+this will generate the  download scritp to all the fields where this objects are.
+
+
+
+[3]. Run the download script
+
+$  sh download.sh
+
+it will download  and store the files 
+in directories  sdss_u,  sdss_g,  and so on.
+
+
+[4]. run the makemyPSF.py on the same list with same filters.
+
+$  python makemyPSF foo.list ugriz
+
+it will download the psField files to psField directory, then will locate each 
+object from the list in pixel coordinates in a given field and then will 
+reconstruct the PSF fits file for it from the information in the psField file 
+relative to the Field in question.
+
+
+[5]. write me saying everything went ok and thanks.
+
+

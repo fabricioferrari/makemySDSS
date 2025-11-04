@@ -1,0 +1,261 @@
+#!/usr/bin/python
+"""
+Take the stamsp from the makemySDSSfilelist list
+
+Lista are
+
+(run,rerun,camcol,field)    objid_1 objid_2 ... objid_N
+
+"""
+
+
+# how many Petrosian Radii to cut the stamp
+SIZERP = 5.
+
+
+import makemySDSSlib as makemySDSS
+import pylab as pl
+import numpy as np
+import pyfits
+import os
+import time
+from astLib import astWCS, astImages
+from sys import argv,stderr
+
+
+PIXELSZ   = 0.396 # arcsec/pix
+FILTERNUM = {'u':1, 'g':2, 'r':3, 'i':4, 'z':5}
+
+
+if len(argv) < 4:
+    print """
+
+    makemySTAMPS OBJLIST FRAMELIST  FILTER[s] 
+
+         where OBJLIST 
+         objid, ra,dec, run,rerun,camcol,field, Rp
+
+         and FRAMELIST is
+         run,rerun,camcol,field
+
+         and FILTER is any combinations of 'ugriz' 
+
+         """
+
+    exit()
+
+
+
+
+
+
+def extract_stamps(framelocalbz2, thisframeIDs):
+
+    ### CHECK IF  FILE EXISTS ###
+    # check if frame-r-007807-5-0013.fits or frame-r-007807-5-0013.fits.bz2 file exists
+
+    # DO NOT EXIST .fits OR .fits.bz2 
+    if not os.path.isfile(framedir + '/' + framelocalbz2)  and \
+       not os.path.isfile(framedir + '/' + framelocal) :
+        print 'ERR: frame not found', framelocalbz2
+        return 
+    # check if psField-005972-2-0176.fit exists 
+    if not os.path.isfile(psFdir + '/' + psFlocal):
+        print 'ERR: psField not found', psFlocal
+
+    
+    # BUNZIP2 it (but keep original, fits is removed at the end)
+    if os.path.isfile(framedir + '/' + framelocalbz2) and \
+           not os.path.isfile(framedir + '/' + framelocal):
+        bzipstatus = os.system('bunzip2 -k ' + framedir + '/' + framelocalbz2 )
+        if bzipstatus!=0:
+            print 'ERR: bzip ', framelocalbz2
+
+
+    ### FRAME STAMPING ###
+    try:
+        frame,framehdr  = pyfits.getdata(framedir + '/' + framelocal, header=1)
+        framewcs = astWCS.WCS(framedir + '/' + framelocal)
+    except:
+        print 'ERR: could not open fits ', frame
+
+
+    for ii in thisframeIDs:
+
+        print '\t', objids[ii], 
+
+        # stamp size in degrees
+        SZdeg  = float(2.*SIZERP * Rps[ii] / 3600.)
+
+        try:
+            stamp = astImages.clipImageSectionWCS(frame,framewcs, ras[ii] , decs[ii], float(SZdeg))
+            # update HEADER: CRPIX{1,2} and CRVAL{1,2}
+            # with reference pixels and its RA,DEC coordinates
+            ra_ref, dec_ref = stamp['wcs'].getCentreWCSCoords()
+            x0_ref, y0_ref  = stamp['wcs'].wcs2pix(ra_ref, dec_ref)
+        
+
+
+            # CHECKS IF  STAMP WAS ENTIRELY ON THE FIELD,
+            # if NOT, put a FLAG in the header
+       
+            # number of pixels in stamp cut
+            stampNpix = np.inner(*stamp['data'].shape)
+            # theoretical number of pixels
+            teoNpix   = int((SZdeg**2/ framewcs.getPixelSizeDeg()**2))
+            
+            #print stampNpix, teoNpix,
+            if stampNpix < 0.9*teoNpix :
+                fraction = '%.0f' % (100*stampNpix/teoNpix )
+                stamp['wcs'].header.update('FLAGINC', str(fraction), comment='MFMTK: incomplete stamp, % in pixels')
+                print 'incomplete', 
+ 
+            stamp['wcs'].header.update('CRPIX1', int(x0_ref) )
+            stamp['wcs'].header.update('CRPIX2', int(y0_ref) )
+            
+            stamp['wcs'].header.update('CRVAL1', ra_ref)
+            stamp['wcs'].header.update('CRVAL2', dec_ref)
+            
+            stamp['wcs'].header.update('OBJID10', objids[ii], comment='MFMTK: SDSS DR10 Object ID')
+            stamp['wcs'].header.add_history('MFMTK: STAMP by MORFOMETRYKA, %s, Fabricio Ferrari' % time.strftime('%Y %b %d') )   
+
+       
+            stamp['wcs'].updateFromHeader()
+        
+            astImages.saveFITS( stampdir + '/' + str(objids[ii]) + '_' + str(band) + '.fits', \
+                                stamp['data'], stamp['wcs'])
+            print '            now stamped'
+
+        except:
+            print 'ERROR extracting stamps id', objids[ii]
+
+
+
+        try:
+            # pixel location in the frame 
+            xpix,ypix = framewcs.wcs2pix(ras[ii],decs[ii])
+        except:
+            print 'WARN: assuming psf at the field center'
+            xpix = frame.shape[1]/2.
+            ypix = frame.shape[0]/2.
+
+        objpsfname = objpsfdir + '/' + 'psf_' + str(objids[ii]) + '_' + str(band) + '.fits'
+
+        readPSF_status = os.system ('./read_PSF %s  %i  %f %f  %s' % \
+                                    (psFdir+'/'+psFlocal,   \
+                                     FILTERNUM[band],  xpix ,ypix, objpsfname ) )
+
+        if readPSF_status !=0:
+            print 'ERROR generating PSF (read_PSF)' 
+        
+
+    os.remove(framedir + '/' + framelocal )
+
+
+
+
+
+
+#########################################
+#    _ __ ___   __ _(_)_ __  
+#   | '_ ` _ \ / _` | | '_ \ 
+#   | | | | | | (_| | | | | |
+#   |_| |_| |_|\__,_|_|_| |_|
+#########################################
+
+
+dbfile    = argv[1]
+framefile = argv[2]
+band      = argv[3]
+
+objids  = []
+ras     = []
+decs    = []
+runs    = []
+reruns  = []
+camcols = []
+fields  = []
+Rps     = []
+
+for linha in open(dbfile, 'r'): 
+    Sobjid,Sra,Sdec,Srun,Srerun,Scamcol,Sfield,SRp = linha.split(',')
+    
+    try:
+        objids.append(  int(Sobjid) )
+        ras.append(     float(Sra)  )
+        decs.append(    float(Sdec) )
+        runs.append(    int(Srun)   )
+        reruns.append(  int(Srerun) )
+        camcols.append( int(Scamcol))
+        fields.append(  int(Sfield) )
+        Rps.append(     float(SRp)  )
+    except:
+        print >> stderr, 'missing line', linha
+        continue
+
+
+N = len(objids)
+
+objids  = np.array(objids)
+ras     = np.array(ras)
+decs    = np.array(decs)
+runs    = np.array(runs)
+reruns  = np.array(reruns)
+camcols = np.array(camcols)
+fields  = np.array(fields)
+Rps     = np.array(Rps)
+
+stamprootdir = 'stamps_' + str(band)
+if not os.path.isdir(stamprootdir):
+    os.mkdir(stamprootdir)
+
+psfrootdir = 'psf_' + str(band)
+if not os.path.isdir(psfrootdir):
+    os.mkdir(psfrootdir)
+    
+
+
+for xx in open(framefile, 'r'): 
+    RN, RR, CC, FF  = xx.split(',')
+    RN = int(RN)
+    RR = int(RR)
+    CC = int(CC)
+    FF = int(FF)
+    
+    print '\nRUN,RERUN,CAMCOL,FIELD', RN, RR, CC, FF
+
+
+    stampdir = stamprootdir + '/' + str(RN)
+    if not os.path.isdir(stampdir):
+        os.mkdir(stampdir)
+
+    objpsfdir = psfrootdir + '/' + str(RN)
+    if not os.path.isdir(objpsfdir):
+        os.mkdir(objpsfdir)
+
+
+    frameurl      = makemySDSS.frameurl(RN, RR, CC, FF, band=band)
+    framelocalbz2 = makemySDSS.frameurl(RN, RR, CC, FF, band=band, site=0)
+    framelocal    = framelocalbz2.replace('.bz2', '')
+    framedir      = 'frames_%s' % band  
+
+    psFurl    = makemySDSS.psfurl(RN, RR, CC, FF)
+    psFlocal  = makemySDSS.psfurl(RN, RR, CC, FF, site=0)
+    psFdir    = 'psField'   
+
+
+
+    thisframeIDs =  np.where((runs==RN) & (reruns==RR) & (camcols==CC) & (fields==FF) )[0]
+
+
+    for ii in thisframeIDs:
+
+
+        if not os.path.isfile( stampdir + '/' + str(objids[ii]) + '_' + str(band) + '.fits'):
+            extract_stamps(framelocalbz2, thisframeIDs)
+            break
+        else:
+            print  '\t',objids[ii], '            already stamped'
+
+            
+print 'DONE'
